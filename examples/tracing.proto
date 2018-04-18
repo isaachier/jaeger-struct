@@ -1,0 +1,5 @@
+syntax = "proto3";
+
+message Trace {
+    uint64 trace_id = 1;
+}

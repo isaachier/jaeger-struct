@@ -13,12 +13,15 @@ HunterGate(
     SHA1 "62f6c01e51dbd15ae46e85c23413e74da88b6a3b"
 )
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 project(jaeger-struct VERSION 0.0.0)
 
 hunter_add_package(Protobuf)
 find_package(Protobuf CONFIG REQUIRED)
 
-add_executable(jaeger_c_gen src/jaeger-struct/CGenerator.cpp)
-target_include_directories(jaeger_c_gen PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/jaeger-struct>)
-target_link_libraries(jaeger_c_gen protobuf::libprotobuf protobuf::libprotoc)
+add_executable(protoc-gen-jaeger-struct src/jaeger-struct/CGenerator.cpp)
+target_include_directories(protoc-gen-jaeger-struct PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
+target_link_libraries(protoc-gen-jaeger-struct PUBLIC
+  protobuf::libprotobuf protobuf::libprotoc)
