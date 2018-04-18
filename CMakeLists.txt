@@ -20,7 +20,7 @@ project(jaeger-struct VERSION 0.0.0)
 hunter_add_package(Protobuf)
 find_package(Protobuf CONFIG REQUIRED)
 
-add_executable(protoc-gen-jaeger-struct src/jaeger-struct/CGenerator.cpp)
+add_executable(protoc-gen-jaeger-struct src/jaeger-struct/Generator.cpp)
 target_include_directories(protoc-gen-jaeger-struct PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
 target_link_libraries(protoc-gen-jaeger-struct PUBLIC

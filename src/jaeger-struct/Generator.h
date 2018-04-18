@@ -6,7 +6,7 @@
 namespace jaegertracing {
 namespace structgen {
 
-class CGenerator : public google::protobuf::compiler::CodeGenerator {
+class Generator : public google::protobuf::compiler::CodeGenerator {
   public:
     bool Generate(const google::protobuf::FileDescriptor* file,
                   const std::string& parameter,

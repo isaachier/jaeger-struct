@@ -1,5 +1,8 @@
 syntax = "proto3";
 
+message Span { uint64 span_id = 1; }
+
 message Trace {
-    uint64 trace_id = 1;
+  uint64 trace_id = 1;
+  Span span = 2;
 }
