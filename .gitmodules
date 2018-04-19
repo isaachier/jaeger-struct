@@ -1,0 +1,3 @@
+[submodule "idl"]
+	path = idl
+	url = https://github.com/isaachier/jaeger-idl

@@ -27,7 +27,7 @@ std::string underlyingType(const google::protobuf::FieldDescriptor& field)
         TYPE_MAPPING(INT64, int64_t);
         TYPE_MAPPING(UINT32, uint32_t);
         TYPE_MAPPING(UINT64, uint64_t);
-        TYPE_MAPPING(STRING, const char*);
+        TYPE_MAPPING(STRING, jaeger_string);
     case google::protobuf::FieldDescriptor::CPPTYPE_ENUM:
         typeStr = field.enum_type()->name();
         break;
@@ -35,9 +35,7 @@ std::string underlyingType(const google::protobuf::FieldDescriptor& field)
         typeStr = field.message_type()->name();
         break;
     default:
-        std::ostringstream oss;
-        oss << "Unknown type " << field.type_name();
-        throw std::invalid_argument(oss.str());
+        break;
     }
 
     return typeStr;
@@ -49,9 +47,9 @@ std::string determineType(const google::protobuf::FieldDescriptor& field)
 {
     switch (field.label()) {
     case google::protobuf::FieldDescriptor::LABEL_OPTIONAL:
-        return "jaeger_optional";
+        return "JAEGER_OPTIONAL(" + underlyingType(field) + ")";
     case google::protobuf::FieldDescriptor::LABEL_REPEATED:
-        return "jaeger_vector";
+        return "JAEGER_LIST(" + underlyingType(field) + ")";
     case google::protobuf::FieldDescriptor::LABEL_REQUIRED:
         return underlyingType(field);
     default:
@@ -68,18 +66,37 @@ Field::Field(const google::protobuf::FieldDescriptor& descriptor)
 
 Field::~Field() = default;
 
-void Field::writeDeclaration(google::protobuf::io::Printer& printer) const
+#define DETERMINE_TYPE_OR_FAIL(var)                                            \
+    const auto var = determineType(_descriptor);                               \
+    {                                                                          \
+        if (type.empty()) {                                                    \
+            std::ostringstream oss;                                            \
+            oss << "Unknown type " << _descriptor.cpp_type_name();             \
+            error = oss.str();                                                 \
+            return false;                                                      \
+        }                                                                      \
+    }
+
+bool Field::writeDeclaration(google::protobuf::io::Printer& printer,
+                             std::string& error) const
 {
-    printer.Print("$type$ $name$;\n",
-                  "type",
-                  determineType(_descriptor),
-                  "name",
-                  _descriptor.name());
+    DETERMINE_TYPE_OR_FAIL(type);
+    printer.Print("$type$ $name$;\n", "type", type, "name", _descriptor.name());
+    return true;
 }
 
-void Field::writeInitializer(google::protobuf::io::Printer& printer) const
+bool Field::writeInitializer(google::protobuf::io::Printer& printer,
+                             std::string& error) const
 {
-    // TODO
+    DETERMINE_TYPE_OR_FAIL(type);
+    if (type == "jaeger_list") {
+        printer.Print("jaeger_list_init(&$name$, sizeof($underlying$))",
+                      "name",
+                      _descriptor.name(),
+                      "underlying",
+                      underlyingType(_descriptor));
+    }
+    return true;
 }
 
 }  // namespace compiler

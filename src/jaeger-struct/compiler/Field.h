@@ -25,9 +25,11 @@ class Field {
 
     ~Field();
 
-    void writeDeclaration(google::protobuf::io::Printer& printer) const;
+    bool writeDeclaration(google::protobuf::io::Printer& printer,
+                          std::string& error) const;
 
-    void writeInitializer(google::protobuf::io::Printer& printer) const;
+    bool writeInitializer(google::protobuf::io::Printer& printer,
+                          std::string& error) const;
 
   private:
     const google::protobuf::FieldDescriptor& _descriptor;

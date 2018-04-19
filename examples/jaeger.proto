@@ -1,0 +1,76 @@
+// Copyright (c) 2017 Uber Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package jaegertracing.protobuf;
+
+message Tag {
+  string key = 1;
+  oneof value {
+    string str_value = 2;
+    double double_value = 3;
+    bool bool_value = 4;
+    int64 long_value = 5;
+    bytes binary_value = 6;
+  }
+}
+
+message Log {
+  int64 timestamp = 1;
+  repeated Tag fields = 2;
+}
+
+message TraceID {
+  uint64 high = 1;
+  uint64 low = 2;
+}
+
+message SpanRef {
+  enum Type {
+    CHILD_OF = 0;
+    FOLLOWS_FROM = 1;
+  }
+  Type type = 1;
+  TraceID trace_id = 2;
+  uint64 span_id = 3;
+}
+
+message Span {
+  TraceID trace_id = 1;
+  uint64 span_id = 2;
+  uint64 parent_span_id = 3;
+  string operation_name = 4;
+  repeated SpanRef references = 5;
+  int32 flags = 6;
+  int64 start_time = 7;
+  int64 duration = 8;
+  repeated Tag tags = 9;
+  repeated Log logs = 10;
+}
+
+message Process {
+  string service_name = 1;
+  repeated Tag tags = 2;
+}
+
+message Batch {
+  Process process = 1;
+  repeated Span spans = 2;
+}
+
+message BatchResponse { bool ok = 1; };
+
+service Collector {
+  rpc SubmitBatches(stream Batch) returns (stream BatchResponse);
+}
