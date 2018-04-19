@@ -1,4 +1,4 @@
-#include <jaeger-struct/Generator.h>
+#include <jaeger-struct/compiler/Generator.h>
 
 #include <iostream>
 #include <memory>
@@ -8,8 +8,10 @@
 #include <google/protobuf/io/printer.h>
 #include <google/protobuf/io/zero_copy_stream.h>
 
-namespace jaegertracing {
-namespace structgen {
+#include <jaeger-struct/compiler/Field.h>
+
+namespace jaeger_struct {
+namespace compiler {
 namespace {
 
 struct Context {
@@ -52,7 +54,7 @@ bool forEachField(const google::protobuf::Descriptor& message,
                   Functor f)
 {
     for (auto i = 0, len = message.field_count(); i < len; i++) {
-        if (!f(message.field(i), context)) {
+        if (!f(*message.field(i), context)) {
             return false;
         }
     }
@@ -76,36 +78,20 @@ bool forEachMessage(const google::protobuf::FileDescriptor& file,
     return true;
 }
 
-bool generateField(const google::protobuf::FieldDescriptor* field,
+bool generateField(const google::protobuf::FieldDescriptor& fieldDescriptor,
                    Context& context)
 {
-    std::string typeStr;
-
-#define TYPE_MAPPING(enumName, type)                                           \
-    case google::protobuf::FieldDescriptor::CPPTYPE_##enumName:                \
-        typeStr = #type;                                                       \
-        break
-
-    switch (field->cpp_type()) {
-        TYPE_MAPPING(BOOL, bool);
-        TYPE_MAPPING(FLOAT, float);
-        TYPE_MAPPING(DOUBLE, double);
-        TYPE_MAPPING(INT32, int32_t);
-        TYPE_MAPPING(INT64, int64_t);
-        TYPE_MAPPING(UINT32, uint32_t);
-        TYPE_MAPPING(UINT64, uint64_t);
-        TYPE_MAPPING(ENUM, int);
-        TYPE_MAPPING(STRING, const char*);
-    case google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE:
-        typeStr = field->message_type()->name();
-        break;
-    default:
-        context._error = "Invalid type";
+    try {
+        Field field(fieldDescriptor);
+        field.writeDeclaration(*context._printer);
+        return true;
+    } catch (const std::exception& ex) {
+        context._error = ex.what();
+        return false;
+    } catch (...) {
+        context._error = "Unknown error";
         return false;
     }
-    context._printer->Print(
-        "    $type$ $name$;\n", "type", typeStr, "name", field->name());
-    return true;
 }
 
 bool generateStruct(const google::protobuf::Descriptor& message,
@@ -129,11 +115,11 @@ bool Generator::Generate(const google::protobuf::FileDescriptor* file,
     return forEachMessage(*file, context, generateStruct);
 }
 
-}  // namespace structgen
-}  // namespace jaegertracing
+}  // namespace compiler
+}  // namespace jaeger_struct
 
 int main(int argc, char* argv[])
 {
-    jaegertracing::structgen::Generator gen;
+    jaeger_struct::compiler::Generator gen;
     return google::protobuf::compiler::PluginMain(argc, argv, &gen);
 }

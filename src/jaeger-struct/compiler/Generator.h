@@ -1,10 +1,10 @@
-#ifndef JAEGER_STRUCT_C_GENERATOR
-#define JAEGER_STRUCT_C_GENERATOR
+#ifndef JAEGER_STRUCT_COMPILER_GENERATOR
+#define JAEGER_STRUCT_COMPILER_GENERATOR
 
 #include <google/protobuf/compiler/code_generator.h>
 
-namespace jaegertracing {
-namespace structgen {
+namespace jaeger_struct {
+namespace compiler {
 
 class Generator : public google::protobuf::compiler::CodeGenerator {
   public:
@@ -14,7 +14,7 @@ class Generator : public google::protobuf::compiler::CodeGenerator {
                   std::string* error) const override;
 };
 
-}  // namespace structgen
-}  // namespace jaegertracing
+}  // namespace compiler
+}  // namespace jaeger_struct
 
-#endif  // JAEGER_STRUCT_C_GENERATOR
+#endif  // JAEGER_STRUCT_COMPILER_GENERATOR
