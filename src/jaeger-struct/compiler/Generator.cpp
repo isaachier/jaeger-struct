@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2018 Uber Technologies, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <jaeger-struct/compiler/Generator.h>
 
 #include <iostream>
@@ -125,20 +141,20 @@ bool generateStruct(const google::protobuf::Descriptor& message,
     return result;
 }
 
-void writeMacros(Context& context)
+void writeProlog(google::protobuf::io::Printer& printer,
+                 const std::string& guard)
 {
-    context.openFile("macros.h");
-    context._printer->Print("#ifndef MACROS_H\n");
-    context._printer->Print("#define MACROS_H\n");
-    context._printer->Print("#endif /* MACROS_H */\n");
+    printer.Print("#ifndef $guard$\n", "guard", guard);
+    printer.Print("#define $guard$\n\n", "guard", guard);
+    printer.Print("#include <jaeger-struct/runtime/list.h>\n");
+    printer.Print("#include <jaeger-struct/runtime/optional.h>\n");
+    printer.Print("#include <jaeger-struct/runtime/string.h>\n");
 }
 
-void writeProlog(google::protobuf::io::Printer& printer,
-                 const std::string& includeGuard)
+void writeEpilog(google::protobuf::io::Printer& printer,
+                 const std::string& guard)
 {
-    printer.Print("#ifndef $guard$\n", "guard", includeGuard);
-    printer.Print("#define $guard$\n", "guard", includeGuard);
-    printer.Print("#include \"macros.h\"\n");
+    printer.Print("#endif /* $guard$ */\n", "guard", guard);
 }
 
 std::string includeGuard(const std::string& fileName)
@@ -147,14 +163,14 @@ std::string includeGuard(const std::string& fileName)
     std::transform(std::begin(fileName),
                    std::end(fileName),
                    std::back_inserter(result),
-                   [](int ch) {
+                   [](char ch) {
                        if (std::islower(ch)) {
                            return static_cast<char>(std::toupper(ch));
                        }
                        if (!std::isupper(ch)) {
                            return '_';
                        }
-                       return static_cast<char>(ch);
+                       return ch;
                    });
     return result;
 }
@@ -167,11 +183,15 @@ bool Generator::Generate(const google::protobuf::FileDescriptor* file,
                          std::string* error) const
 {
     Context context(*arg, *error);
-    writeMacros(context);
     const auto fileName = stripProto(file->name()) + ".h";
     context.openFile(fileName);
-    writeProlog(*context._printer, includeGuard(fileName));
-    return forEachMessage(*file, context, generateStruct);
+    const auto guard = includeGuard(fileName);
+    writeProlog(*context._printer, guard);
+    if (!forEachMessage(*file, context, generateStruct)) {
+        return false;
+    }
+    writeEpilog(*context._printer, guard);
+    return true;
 }
 
 }  // namespace compiler

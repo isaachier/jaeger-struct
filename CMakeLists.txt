@@ -20,6 +20,13 @@ project(jaeger-struct VERSION 0.0.0)
 hunter_add_package(Protobuf)
 find_package(Protobuf CONFIG REQUIRED)
 
+add_library(runtime
+  src/jaeger-struct/runtime/list.c
+  src/jaeger-struct/runtime/optional.c
+  src/jaeger-struct/runtime/string.c)
+target_include_directories(runtime PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
+
 add_executable(protoc-gen-jaeger_struct
   src/jaeger-struct/compiler/Field.cpp
   src/jaeger-struct/compiler/Generator.cpp)
