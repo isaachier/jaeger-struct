@@ -25,7 +25,7 @@ extern "C" {
 
 typedef struct jaeger_string {
     size_t len;
-    char buffer[];
+    char* buffer;
 } jaeger_string;
 
 #ifdef __cplusplus

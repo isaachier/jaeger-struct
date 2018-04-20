@@ -62,10 +62,9 @@ std::string underlyingType(const google::protobuf::FieldDescriptor& field)
 std::string determineType(const google::protobuf::FieldDescriptor& field)
 {
     switch (field.label()) {
-    case google::protobuf::FieldDescriptor::LABEL_OPTIONAL:
-        return "JAEGER_OPTIONAL(" + underlyingType(field) + ")";
     case google::protobuf::FieldDescriptor::LABEL_REPEATED:
         return "JAEGER_LIST(" + underlyingType(field) + ")";
+    case google::protobuf::FieldDescriptor::LABEL_OPTIONAL:
     case google::protobuf::FieldDescriptor::LABEL_REQUIRED:
         return underlyingType(field);
     default:

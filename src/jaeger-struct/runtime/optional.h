@@ -25,7 +25,7 @@ extern "C" {
 
 #define JAEGER_OPTIONAL(type)                                                  \
     struct {                                                                   \
-        unsigned char is_set : 1;                                              \
+        bool is_set;                                                           \
         type value;                                                            \
     }
 

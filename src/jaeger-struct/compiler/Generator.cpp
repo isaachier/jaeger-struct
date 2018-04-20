@@ -19,6 +19,7 @@
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <unordered_set>
 
 #include <google/protobuf/compiler/plugin.h>
 #include <google/protobuf/descriptor.h>
@@ -33,7 +34,7 @@ namespace {
 
 enum class StringCase { kCapsCase, kSnakeCase };
 
-std::string makeIdentifier(const std::string str, StringCase casing)
+std::string stringCasing(const std::string str, StringCase casing)
 {
     std::string result;
     std::function<bool(char)> predicate;
@@ -56,22 +57,48 @@ std::string makeIdentifier(const std::string str, StringCase casing)
                        if (predicate(ch)) {
                            return transform(ch);
                        }
-                       if (!std::isalnum(ch)) {
-                           return '_';
-                       }
                        return ch;
                    });
     return result;
 }
 
+std::string makeIdentifier(const std::string& str)
+{
+    enum class State { kDefault, kSeparator };
+
+    std::string result;
+    State state = State::kDefault;
+    for (auto&& ch : str) {
+        switch (state) {
+        case State::kDefault:
+            if (std::isalnum(ch)) {
+                result += ch;
+            }
+            else {
+                state = State::kSeparator;
+            }
+            break;
+        default:
+            assert(state == State::kSeparator);
+            if (std::isalnum(ch)) {
+                result += '_';
+                result += ch;
+                state = State::kDefault;
+            }
+            break;
+        }
+    }
+    return result;
+}
+
 std::string capsCase(const std::string& str)
 {
-    return makeIdentifier(str, StringCase::kCapsCase);
+    return stringCasing(makeIdentifier(str), StringCase::kCapsCase);
 }
 
 std::string snakeCase(const std::string& str)
 {
-    return makeIdentifier(str, StringCase::kSnakeCase);
+    return stringCasing(makeIdentifier(str), StringCase::kSnakeCase);
 }
 
 struct Context {
@@ -116,56 +143,6 @@ std::string stripProto(const std::string& str)
     return str;
 }
 
-template <typename Message, typename Functor>
-bool forEachField(const Message& message, Context& context, Functor f)
-{
-    for (auto i = 0, len = message.field_count(); i < len; i++) {
-        if (!f(*message.field(i), context)) {
-            return false;
-        }
-    }
-    return true;
-}
-
-template <typename Functor>
-bool forEachOneOf(const google::protobuf::Descriptor& message,
-                  Context& context,
-                  Functor f)
-{
-    for (auto i = 0, len = message.oneof_decl_count(); i < len; i++) {
-        if (!f(*message.oneof_decl(i), context)) {
-            return false;
-        }
-    }
-    return true;
-}
-
-template <typename Functor>
-bool forEachEnum(const google::protobuf::Descriptor& message,
-                 Context& context,
-                 Functor f)
-{
-    for (auto i = 0, len = message.enum_type_count(); i < len; i++) {
-        if (!f(*message.enum_type(i), context)) {
-            return false;
-        }
-    }
-    return true;
-}
-
-template <typename Functor>
-bool forEachMessage(const google::protobuf::FileDescriptor& file,
-                    Context& context,
-                    Functor f)
-{
-    for (auto i = 0, len = file.message_type_count(); i < len; i++) {
-        if (!f(*file.message_type(i), context)) {
-            return false;
-        }
-    }
-    return true;
-}
-
 bool generateField(const google::protobuf::FieldDescriptor& fieldDescriptor,
                    Context& context)
 {
@@ -173,13 +150,17 @@ bool generateField(const google::protobuf::FieldDescriptor& fieldDescriptor,
     return field.writeDeclaration(*context._printer, context._error);
 }
 
-bool generateOneOf(const google::protobuf::OneofDescriptor& oneOfDescriptor,
+bool generateUnion(const google::protobuf::OneofDescriptor& oneOfDescriptor,
                    Context& context)
 {
     context._printer->Print("union {\n");
     context._printer->Indent();
     context._printer->Print("uint8_t tag;\n");
-    const auto result = forEachField(oneOfDescriptor, context, generateField);
+    for (auto i = 0, len = oneOfDescriptor.field_count(); i < len; i++) {
+        if (!generateField(*oneOfDescriptor.field(i), context)) {
+            return false;
+        }
+    }
     context._printer->Outdent();
     context._printer->Print("} $name$;\n", "name", oneOfDescriptor.name());
     return true;
@@ -188,16 +169,19 @@ bool generateOneOf(const google::protobuf::OneofDescriptor& oneOfDescriptor,
 bool generateEnum(const google::protobuf::EnumDescriptor& enumDescriptor,
                   Context& context)
 {
-    const auto type = enumDescriptor.name();
+    const auto type = makeIdentifier(enumDescriptor.full_name());
     context._printer->Print("enum $type$ {\n", "type", type);
     context._printer->Indent();
     for (auto i = 0, len = enumDescriptor.value_count(); i < len; i++) {
         auto&& value = *enumDescriptor.value(i);
-        context._printer->Print("$name$ = $value$,\n",
-                                "name",
-                                capsCase(value.full_name()),
-                                "value",
-                                std::to_string(value.number()));
+        context._printer->Print(
+            "$name$ = $value$$comma$\n",
+            "name",
+            capsCase(enumDescriptor.full_name() + '_' + value.name()),
+            "value",
+            std::to_string(value.number()),
+            "comma",
+            i == (len - 1) ? "" : ",");
     }
     context._printer->Outdent();
     context._printer->Print("};\n");
@@ -207,15 +191,84 @@ bool generateEnum(const google::protobuf::EnumDescriptor& enumDescriptor,
 bool generateStruct(const google::protobuf::Descriptor& message,
                     Context& context)
 {
-    context._printer->Print(
-        "\ntypedef struct $name$ {\n", "name", snakeCase(message.full_name()));
+    context._printer->Print("\ntypedef struct $name$ {\n",
+                            "name",
+                            makeIdentifier(message.full_name()));
     context._printer->Indent();
-    const auto result = forEachField(message, context, generateField);
-    forEachEnum(message, context, generateEnum);
-    forEachOneOf(message, context, generateOneOf);
+
+    std::unordered_set<const google::protobuf::FieldDescriptor*> unionFields;
+    for (auto i = 0, len = message.oneof_decl_count(); i < len; i++) {
+        auto&& oneOf = *message.oneof_decl(i);
+        for (auto j = 0, oneOfLen = oneOf.field_count(); j < oneOfLen; j++) {
+            unionFields.insert(oneOf.field(j));
+        }
+    }
+
+    std::unordered_set<const google::protobuf::FieldDescriptor*> fields;
+    for (auto i = 0, len = message.field_count(); i < len; i++) {
+        auto&& field = *message.field(i);
+        fields.insert(&field);
+    }
+
+    for (auto&& unionField : unionFields) {
+        auto itr = fields.find(unionField);
+        assert(itr != std::end(fields));
+        fields.erase(itr);
+    }
+
+    std::vector<const google::protobuf::FieldDescriptor*> sortedFields(
+        fields.cbegin(), fields.cend());
+    std::sort(std::begin(sortedFields),
+              std::end(sortedFields),
+              [](const google::protobuf::FieldDescriptor* lhs,
+                 const google::protobuf::FieldDescriptor* rhs) {
+                  return lhs->number() < rhs->number();
+              });
+    for (auto&& field : fields) {
+        if (!generateField(*field, context)) {
+            return false;
+        }
+    }
+
+    for (auto i = 0, len = message.oneof_decl_count(); i < len; i++) {
+        auto&& oneOf = *message.oneof_decl(i);
+        if (!generateUnion(oneOf, context)) {
+            return false;
+        }
+    }
+
     context._printer->Outdent();
     context._printer->Print("} $name$;\n", "name", message.name());
-    return result;
+    return true;
+}
+
+bool generateForwardDeclarations(
+    const google::protobuf::FileDescriptor& descriptor, Context& context)
+{
+    for (auto i = 0, len = descriptor.message_type_count(); i < len; i++) {
+        auto&& message = *descriptor.message_type(i);
+        const auto name = makeIdentifier(message.full_name());
+        context._printer->Print("struct $name$;\n", "name", name);
+
+        for (auto j = 0, enumLen = message.enum_type_count(); j < enumLen;
+             j++) {
+            if (!generateEnum(*message.enum_type(j), context)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool generateDefinitions(const google::protobuf::FileDescriptor& descriptor,
+                         Context& context)
+{
+    for (auto i = 0, len = descriptor.message_type_count(); i < len; i++) {
+        if (!generateStruct(*descriptor.message_type(i), context)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 void writeProlog(google::protobuf::io::Printer& printer,
@@ -228,7 +281,7 @@ void writeProlog(google::protobuf::io::Printer& printer,
     printer.Print("#include <jaeger-struct/runtime/string.h>\n\n");
     printer.Print("#ifdef __cplusplus\n");
     printer.Print("extern \"C\" {\n");
-    printer.Print("#endif __cplusplus\n");
+    printer.Print("#endif /* __cplusplus */\n\n");
 }
 
 void writeEpilog(google::protobuf::io::Printer& printer,
@@ -236,7 +289,7 @@ void writeEpilog(google::protobuf::io::Printer& printer,
 {
     printer.Print("\n#ifdef __cplusplus\n");
     printer.Print("}\n");
-    printer.Print("#endif __cplusplus\n\n");
+    printer.Print("#endif /* __cplusplus */\n\n");
     printer.Print("#endif /* $guard$ */\n", "guard", guard);
 }
 
@@ -252,7 +305,10 @@ bool Generator::Generate(const google::protobuf::FileDescriptor* file,
     context.openFile(fileName);
     const auto guard = capsCase(fileName);
     writeProlog(*context._printer, guard);
-    if (!forEachMessage(*file, context, generateStruct)) {
+    if (!generateForwardDeclarations(*file, context)) {
+        return false;
+    }
+    if (!generateDefinitions(*file, context)) {
         return false;
     }
     writeEpilog(*context._printer, guard);
