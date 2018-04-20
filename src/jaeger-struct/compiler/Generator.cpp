@@ -16,6 +16,7 @@
 
 #include <jaeger-struct/compiler/Generator.h>
 
+#include <functional>
 #include <iostream>
 #include <memory>
 
@@ -29,6 +30,49 @@
 namespace jaeger_struct {
 namespace compiler {
 namespace {
+
+enum class StringCase { kCapsCase, kSnakeCase };
+
+std::string makeIdentifier(const std::string str, StringCase casing)
+{
+    std::string result;
+    std::function<bool(char)> predicate;
+    std::function<char(char)> transform;
+    switch (casing) {
+    case StringCase::kCapsCase:
+        predicate = [](char ch) { return std::islower(ch); };
+        transform = [](char ch) { return std::toupper(ch); };
+        break;
+    default:
+        assert(casing == StringCase::kSnakeCase);
+        predicate = [](char ch) { return std::isupper(ch); };
+        transform = [](char ch) { return std::tolower(ch); };
+        break;
+    }
+    std::transform(std::begin(str),
+                   std::end(str),
+                   std::back_inserter(result),
+                   [predicate, transform](char ch) {
+                       if (predicate(ch)) {
+                           return transform(ch);
+                       }
+                       if (!std::isalnum(ch)) {
+                           return '_';
+                       }
+                       return ch;
+                   });
+    return result;
+}
+
+std::string capsCase(const std::string& str)
+{
+    return makeIdentifier(str, StringCase::kCapsCase);
+}
+
+std::string snakeCase(const std::string& str)
+{
+    return makeIdentifier(str, StringCase::kSnakeCase);
+}
 
 struct Context {
     Context(google::protobuf::compiler::GeneratorContext& context,
@@ -97,6 +141,19 @@ bool forEachOneOf(const google::protobuf::Descriptor& message,
 }
 
 template <typename Functor>
+bool forEachEnum(const google::protobuf::Descriptor& message,
+                 Context& context,
+                 Functor f)
+{
+    for (auto i = 0, len = message.enum_type_count(); i < len; i++) {
+        if (!f(*message.enum_type(i), context)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+template <typename Functor>
 bool forEachMessage(const google::protobuf::FileDescriptor& file,
                     Context& context,
                     Functor f)
@@ -128,13 +185,33 @@ bool generateOneOf(const google::protobuf::OneofDescriptor& oneOfDescriptor,
     return true;
 }
 
+bool generateEnum(const google::protobuf::EnumDescriptor& enumDescriptor,
+                  Context& context)
+{
+    const auto type = enumDescriptor.name();
+    context._printer->Print("enum $type$ {\n", "type", type);
+    context._printer->Indent();
+    for (auto i = 0, len = enumDescriptor.value_count(); i < len; i++) {
+        auto&& value = *enumDescriptor.value(i);
+        context._printer->Print("$name$ = $value$,\n",
+                                "name",
+                                capsCase(value.full_name()),
+                                "value",
+                                std::to_string(value.number()));
+    }
+    context._printer->Outdent();
+    context._printer->Print("};\n");
+    return true;
+}
+
 bool generateStruct(const google::protobuf::Descriptor& message,
                     Context& context)
 {
     context._printer->Print(
-        "\ntypedef struct $name$ {\n", "name", message.name());
+        "\ntypedef struct $name$ {\n", "name", snakeCase(message.full_name()));
     context._printer->Indent();
     const auto result = forEachField(message, context, generateField);
+    forEachEnum(message, context, generateEnum);
     forEachOneOf(message, context, generateOneOf);
     context._printer->Outdent();
     context._printer->Print("} $name$;\n", "name", message.name());
@@ -148,31 +225,19 @@ void writeProlog(google::protobuf::io::Printer& printer,
     printer.Print("#define $guard$\n\n", "guard", guard);
     printer.Print("#include <jaeger-struct/runtime/list.h>\n");
     printer.Print("#include <jaeger-struct/runtime/optional.h>\n");
-    printer.Print("#include <jaeger-struct/runtime/string.h>\n");
+    printer.Print("#include <jaeger-struct/runtime/string.h>\n\n");
+    printer.Print("#ifdef __cplusplus\n");
+    printer.Print("extern \"C\" {\n");
+    printer.Print("#endif __cplusplus\n");
 }
 
 void writeEpilog(google::protobuf::io::Printer& printer,
                  const std::string& guard)
 {
+    printer.Print("\n#ifdef __cplusplus\n");
+    printer.Print("}\n");
+    printer.Print("#endif __cplusplus\n\n");
     printer.Print("#endif /* $guard$ */\n", "guard", guard);
-}
-
-std::string includeGuard(const std::string& fileName)
-{
-    std::string result;
-    std::transform(std::begin(fileName),
-                   std::end(fileName),
-                   std::back_inserter(result),
-                   [](char ch) {
-                       if (std::islower(ch)) {
-                           return static_cast<char>(std::toupper(ch));
-                       }
-                       if (!std::isupper(ch)) {
-                           return '_';
-                       }
-                       return ch;
-                   });
-    return result;
 }
 
 }  // anonymous namespace
@@ -185,7 +250,7 @@ bool Generator::Generate(const google::protobuf::FileDescriptor* file,
     Context context(*arg, *error);
     const auto fileName = stripProto(file->name()) + ".h";
     context.openFile(fileName);
-    const auto guard = includeGuard(fileName);
+    const auto guard = capsCase(fileName);
     writeProlog(*context._printer, guard);
     if (!forEachMessage(*file, context, generateStruct)) {
         return false;
