@@ -17,10 +17,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(jaeger-struct VERSION 0.0.0)
 
+include(CheckCXXCompilerFlag)
+include(CTest)
+
 hunter_add_package(Protobuf)
 find_package(Protobuf CONFIG REQUIRED)
-
-include(CheckCXXCompilerFlag)
 
 check_cxx_compiler_flag(-Wall have_wall)
 if(have_wall)
@@ -39,11 +40,28 @@ add_library(runtime
 target_include_directories(runtime PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
 
-add_executable(protoc-gen-jaeger_struct
+add_library(compiler
   src/jaeger-struct/compiler/Field.cpp
   src/jaeger-struct/compiler/Generator.cpp
   src/jaeger-struct/compiler/Strings.cpp)
-target_include_directories(protoc-gen-jaeger_struct PUBLIC
+target_include_directories(compiler PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
-target_link_libraries(protoc-gen-jaeger_struct PUBLIC
+target_link_libraries(compiler PUBLIC
   protobuf::libprotobuf protobuf::libprotoc)
+
+add_executable(protoc-gen-jaeger_struct
+  src/jaeger-struct/compiler/Main.cpp)
+target_link_libraries(protoc-gen-jaeger_struct PUBLIC compiler)
+
+if(BUILD_TESTING)
+  hunter_add_package(GTest)
+  find_package(GTest CONFIG REQUIRED)
+  add_executable(UnitTest
+    src/jaeger-struct/compiler/StringsTest.cpp)
+  target_compile_definitions(UnitTest PUBLIC
+      GTEST_HAS_TR1_TUPLE=0
+      GTEST_USE_OWN_TR1_TUPLE=0)
+  target_link_libraries(UnitTest PUBLIC
+    compiler GTest::main)
+  add_test(NAME UnitTest COMMAND UnitTest)
+endif()

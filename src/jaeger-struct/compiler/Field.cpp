@@ -47,10 +47,10 @@ std::string underlyingType(const google::protobuf::FieldDescriptor& field)
         TYPE_MAPPING(UINT64, uint64_t);
         TYPE_MAPPING(STRING, jaeger_string);
     case google::protobuf::FieldDescriptor::CPPTYPE_ENUM:
-        typeStr = makeIdentifier(field.enum_type()->full_name());
+        typeStr = snakeCase(makeIdentifier(field.enum_type()->full_name()));
         break;
     case google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE:
-        typeStr = makeIdentifier(field.message_type()->full_name());
+        typeStr = snakeCase(makeIdentifier(field.message_type()->full_name()));
         break;
     default:
         break;

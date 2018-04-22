@@ -32,14 +32,16 @@ inline std::string makeIdentifier(const std::string& str)
 
 inline std::string capsCase(const std::string& str)
 {
-    const std::regex groupRegex("[A-Za-z][A-Za-z0-9]+");
+    const std::regex groupRegex("[A-Z][A-Z0-9]+|[A-Za-z][a-z0-9]+");
     std::string result;
     result.reserve(str.size());
     std::sregex_iterator begin(std::begin(str), std::end(str), groupRegex);
     std::sregex_iterator end;
     for (auto itr = begin; itr != end; ++itr) {
         auto&& match = *itr;
-        result += '_';
+        if (!result.empty()) {
+            result += '_';
+        }
         for (auto&& ch : match.str()) {
             if (std::islower(ch)) {
                 result += std::toupper(ch);

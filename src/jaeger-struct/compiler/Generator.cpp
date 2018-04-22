@@ -100,7 +100,7 @@ bool generateUnion(const google::protobuf::OneofDescriptor& oneOfDescriptor,
 bool generateEnum(const google::protobuf::EnumDescriptor& enumDescriptor,
                   Context& context)
 {
-    const auto type = makeIdentifier(enumDescriptor.full_name());
+    const auto type = snakeCase(makeIdentifier(enumDescriptor.full_name()));
     context._printer->Print("typedef enum $type$ {\n", "type", type);
     context._printer->Indent();
     for (auto i = 0, len = enumDescriptor.value_count(); i < len; i++) {
@@ -122,7 +122,7 @@ bool generateEnum(const google::protobuf::EnumDescriptor& enumDescriptor,
 bool generateStruct(const google::protobuf::Descriptor& message,
                     Context& context)
 {
-    const auto name = makeIdentifier(message.full_name());
+    const auto name = snakeCase(makeIdentifier(message.full_name()));
     context._printer->Print("\ntypedef struct $name$ {\n", "name", name);
     context._printer->Indent();
 
@@ -177,7 +177,7 @@ bool generateForwardDeclarations(
 {
     for (auto i = 0, len = descriptor.message_type_count(); i < len; i++) {
         auto&& message = *descriptor.message_type(i);
-        const auto name = makeIdentifier(message.full_name());
+        const auto name = snakeCase(makeIdentifier(message.full_name()));
         context._printer->Print("struct $name$;\n", "name", name);
 
         for (auto j = 0, enumLen = message.enum_type_count(); j < enumLen;
@@ -204,8 +204,8 @@ bool generateDefinitions(const google::protobuf::FileDescriptor& descriptor,
 void writeProlog(google::protobuf::io::Printer& printer,
                  const std::string& guard)
 {
-    printer.Print("#ifndef $guard$\n", "guard", guard);
-    printer.Print("#define $guard$\n\n", "guard", guard);
+    printer.Print("#ifndef $guard$_H\n", "guard", guard);
+    printer.Print("#define $guard$_H\n\n", "guard", guard);
     printer.Print("#include <jaeger-struct/runtime/list.h>\n");
     printer.Print("#include <jaeger-struct/runtime/optional.h>\n");
     printer.Print("#include <jaeger-struct/runtime/string.h>\n\n");
@@ -220,7 +220,7 @@ void writeEpilog(google::protobuf::io::Printer& printer,
     printer.Print("\n#ifdef __cplusplus\n");
     printer.Print("}\n");
     printer.Print("#endif /* __cplusplus */\n\n");
-    printer.Print("#endif /* $guard$ */\n", "guard", guard);
+    printer.Print("#endif /* $guard$_H */\n", "guard", guard);
 }
 
 }  // anonymous namespace
@@ -247,9 +247,3 @@ bool Generator::Generate(const google::protobuf::FileDescriptor* file,
 
 }  // namespace compiler
 }  // namespace jaeger_struct
-
-int main(int argc, char* argv[])
-{
-    jaeger_struct::compiler::Generator gen;
-    return google::protobuf::compiler::PluginMain(argc, argv, &gen);
-}
