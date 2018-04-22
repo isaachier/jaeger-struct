@@ -22,6 +22,8 @@
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/io/printer.h>
 
+#include <jaeger-struct/compiler/Strings.h>
+
 namespace jaeger_struct {
 namespace compiler {
 namespace {
@@ -45,10 +47,10 @@ std::string underlyingType(const google::protobuf::FieldDescriptor& field)
         TYPE_MAPPING(UINT64, uint64_t);
         TYPE_MAPPING(STRING, jaeger_string);
     case google::protobuf::FieldDescriptor::CPPTYPE_ENUM:
-        typeStr = field.enum_type()->name();
+        typeStr = makeIdentifier(field.enum_type()->full_name());
         break;
     case google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE:
-        typeStr = field.message_type()->name();
+        typeStr = makeIdentifier(field.message_type()->full_name());
         break;
     default:
         break;
@@ -105,7 +107,7 @@ bool Field::writeInitializer(google::protobuf::io::Printer& printer,
 {
     DETERMINE_TYPE_OR_FAIL(type);
     if (type == "jaeger_list") {
-        printer.Print("jaeger_list_init(&$name$, sizeof($underlying$))",
+        printer.Print("jaeger_list_init(&$name$)",
                       "name",
                       _descriptor.name(),
                       "underlying",

@@ -16,7 +16,6 @@
 
 #include <jaeger-struct/compiler/Generator.h>
 
-#include <functional>
 #include <iostream>
 #include <memory>
 #include <unordered_set>
@@ -27,79 +26,11 @@
 #include <google/protobuf/io/zero_copy_stream.h>
 
 #include <jaeger-struct/compiler/Field.h>
+#include <jaeger-struct/compiler/Strings.h>
 
 namespace jaeger_struct {
 namespace compiler {
 namespace {
-
-enum class StringCase { kCapsCase, kSnakeCase };
-
-std::string stringCasing(const std::string str, StringCase casing)
-{
-    std::string result;
-    std::function<bool(char)> predicate;
-    std::function<char(char)> transform;
-    switch (casing) {
-    case StringCase::kCapsCase:
-        predicate = [](char ch) { return std::islower(ch); };
-        transform = [](char ch) { return std::toupper(ch); };
-        break;
-    default:
-        assert(casing == StringCase::kSnakeCase);
-        predicate = [](char ch) { return std::isupper(ch); };
-        transform = [](char ch) { return std::tolower(ch); };
-        break;
-    }
-    std::transform(std::begin(str),
-                   std::end(str),
-                   std::back_inserter(result),
-                   [predicate, transform](char ch) {
-                       if (predicate(ch)) {
-                           return transform(ch);
-                       }
-                       return ch;
-                   });
-    return result;
-}
-
-std::string makeIdentifier(const std::string& str)
-{
-    enum class State { kDefault, kSeparator };
-
-    std::string result;
-    State state = State::kDefault;
-    for (auto&& ch : str) {
-        switch (state) {
-        case State::kDefault:
-            if (std::isalnum(ch)) {
-                result += ch;
-            }
-            else {
-                state = State::kSeparator;
-            }
-            break;
-        default:
-            assert(state == State::kSeparator);
-            if (std::isalnum(ch)) {
-                result += '_';
-                result += ch;
-                state = State::kDefault;
-            }
-            break;
-        }
-    }
-    return result;
-}
-
-std::string capsCase(const std::string& str)
-{
-    return stringCasing(makeIdentifier(str), StringCase::kCapsCase);
-}
-
-std::string snakeCase(const std::string& str)
-{
-    return stringCasing(makeIdentifier(str), StringCase::kSnakeCase);
-}
 
 struct Context {
     Context(google::protobuf::compiler::GeneratorContext& context,
@@ -170,7 +101,7 @@ bool generateEnum(const google::protobuf::EnumDescriptor& enumDescriptor,
                   Context& context)
 {
     const auto type = makeIdentifier(enumDescriptor.full_name());
-    context._printer->Print("enum $type$ {\n", "type", type);
+    context._printer->Print("typedef enum $type$ {\n", "type", type);
     context._printer->Indent();
     for (auto i = 0, len = enumDescriptor.value_count(); i < len; i++) {
         auto&& value = *enumDescriptor.value(i);
@@ -184,16 +115,15 @@ bool generateEnum(const google::protobuf::EnumDescriptor& enumDescriptor,
             i == (len - 1) ? "" : ",");
     }
     context._printer->Outdent();
-    context._printer->Print("};\n");
+    context._printer->Print("} $type$;\n", "type", type);
     return true;
 }
 
 bool generateStruct(const google::protobuf::Descriptor& message,
                     Context& context)
 {
-    context._printer->Print("\ntypedef struct $name$ {\n",
-                            "name",
-                            makeIdentifier(message.full_name()));
+    const auto name = makeIdentifier(message.full_name());
+    context._printer->Print("\ntypedef struct $name$ {\n", "name", name);
     context._printer->Indent();
 
     std::unordered_set<const google::protobuf::FieldDescriptor*> unionFields;
@@ -238,7 +168,7 @@ bool generateStruct(const google::protobuf::Descriptor& message,
     }
 
     context._printer->Outdent();
-    context._printer->Print("} $name$;\n", "name", message.name());
+    context._printer->Print("} $name$;\n", "name", name);
     return true;
 }
 

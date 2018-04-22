@@ -29,7 +29,8 @@ target_include_directories(runtime PUBLIC
 
 add_executable(protoc-gen-jaeger_struct
   src/jaeger-struct/compiler/Field.cpp
-  src/jaeger-struct/compiler/Generator.cpp)
+  src/jaeger-struct/compiler/Generator.cpp
+  src/jaeger-struct/compiler/Strings.cpp)
 target_include_directories(protoc-gen-jaeger_struct PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
 target_link_libraries(protoc-gen-jaeger_struct PUBLIC
