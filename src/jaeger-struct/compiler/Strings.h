@@ -14,88 +14,63 @@
  * limitations under the License.
  */
 
-#ifndef JAEGER_STRUCT_COMPILER_STRINGS
-#define JAEGER_STRUCT_COMPILER_STRINGS
+#ifndef JAEGER_STRUCT_COMPILER_STRINGS_H
+#define JAEGER_STRUCT_COMPILER_STRINGS_H
 
-#include <cassert>
 #include <cctype>
-#include <functional>
-#include <iostream>
+#include <regex>
 #include <string>
 
 namespace jaeger_struct {
 namespace compiler {
 
-enum class StringCase { kCapsCase, kSnakeCase };
-
-inline std::string stringCasing(const std::string str, StringCase casing)
-{
-    std::string result;
-    std::function<bool(char)> predicate;
-    std::function<char(char)> transform;
-    switch (casing) {
-    case StringCase::kCapsCase:
-        predicate = [](char ch) { return std::islower(ch); };
-        transform = [](char ch) { return std::toupper(ch); };
-        break;
-    default:
-        assert(casing == StringCase::kSnakeCase);
-        predicate = [](char ch) { return std::isupper(ch); };
-        transform = [](char ch) { return std::tolower(ch); };
-        break;
-    }
-
-    for (auto ch : str) {
-        if (predicate(ch)) {
-            result += ch;
-        }
-        else {
-            result += transform(ch);
-        }
-    }
-    return result;
-}
-
 inline std::string makeIdentifier(const std::string& str)
 {
-    enum class State { kDefault, kSeparator };
-
-    std::string result;
-    auto state = State::kDefault;
-    for (auto&& ch : str) {
-        switch (state) {
-        case State::kDefault:
-            if (std::isalnum(ch)) {
-                result += ch;
-            }
-            else {
-                state = State::kSeparator;
-            }
-            break;
-        default:
-            assert(state == State::kSeparator);
-            if (std::isalnum(ch)) {
-                result += '_';
-                result += ch;
-                state = State::kDefault;
-            }
-            break;
-        }
-    }
-    return result;
+    const std::regex nonAlnumRegex("[^A-Za-z0-9_]+");
+    return std::regex_replace(str, nonAlnumRegex, "_");
 }
 
 inline std::string capsCase(const std::string& str)
 {
-    return stringCasing(makeIdentifier(str), StringCase::kCapsCase);
+    const std::regex groupRegex("[A-Za-z][A-Za-z0-9]+");
+    std::string result;
+    result.reserve(str.size());
+    std::sregex_iterator begin(std::begin(str), std::end(str), groupRegex);
+    std::sregex_iterator end;
+    for (auto itr = begin; itr != end; ++itr) {
+        auto&& match = *itr;
+        result += '_';
+        for (auto&& ch : match.str()) {
+            if (std::islower(ch)) {
+                result += std::toupper(ch);
+            }
+            else {
+                result += ch;
+            }
+        }
+    }
+    result.shrink_to_fit();
+    return result;
 }
 
 inline std::string snakeCase(const std::string& str)
 {
-    return stringCasing(makeIdentifier(str), StringCase::kSnakeCase);
+    auto&& input = capsCase(str);
+    std::string result;
+    result.reserve(input.size());
+    std::transform(std::begin(input),
+                   std::end(input),
+                   std::back_inserter(result),
+                   [](char ch) {
+                       if (std::isupper(ch)) {
+                           return static_cast<char>(std::tolower(ch));
+                       }
+                       return ch;
+                   });
+    return result;
 }
 
 }  // namespace compiler
 }  // namespace jaeger_struct
 
-#endif  // JAEGER_STRUCT_COMPILER_STRINGS
+#endif  // JAEGER_STRUCT_COMPILER_STRINGS_H

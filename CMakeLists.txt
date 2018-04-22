@@ -20,6 +20,18 @@ project(jaeger-struct VERSION 0.0.0)
 hunter_add_package(Protobuf)
 find_package(Protobuf CONFIG REQUIRED)
 
+include(CheckCXXCompilerFlag)
+
+check_cxx_compiler_flag(-Wall have_wall)
+if(have_wall)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+endif()
+
+check_cxx_compiler_flag(-Werror have_werror)
+if(have_werror)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+endif()
+
 add_library(runtime
   src/jaeger-struct/runtime/list.c
   src/jaeger-struct/runtime/optional.c

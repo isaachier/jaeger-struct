@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef JAEGER_STRUCT_COMPILER_GENERATOR
-#define JAEGER_STRUCT_COMPILER_GENERATOR
+#ifndef JAEGER_STRUCT_COMPILER_GENERATOR_H
+#define JAEGER_STRUCT_COMPILER_GENERATOR_H
 
 #include <google/protobuf/compiler/code_generator.h>
 
@@ -33,4 +33,4 @@ class Generator : public google::protobuf::compiler::CodeGenerator {
 }  // namespace compiler
 }  // namespace jaeger_struct
 
-#endif  // JAEGER_STRUCT_COMPILER_GENERATOR
+#endif  // JAEGER_STRUCT_COMPILER_GENERATOR_H
