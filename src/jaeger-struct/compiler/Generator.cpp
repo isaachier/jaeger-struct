@@ -83,7 +83,6 @@ void writeProlog(google::protobuf::io::Printer& printer,
     printer.Print("#ifndef $guard$_H\n", "guard", guard);
     printer.Print("#define $guard$_H\n\n", "guard", guard);
     printer.Print("#include <jaeger-struct/runtime/list.h>\n");
-    printer.Print("#include <jaeger-struct/runtime/optional.h>\n");
     printer.Print("#include <jaeger-struct/runtime/string.h>\n\n");
     printer.Print("#ifdef __cplusplus\n");
     printer.Print("extern \"C\" {\n");
