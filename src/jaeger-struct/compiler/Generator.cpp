@@ -100,22 +100,41 @@ void writeEpilog(google::protobuf::io::Printer& printer,
 }
 
 void generateTypes(const google::protobuf::FileDescriptor& file,
+                   google::protobuf::io::Printer& printer,
                    TypeRegistry& registry)
 {
     for (auto i = 0, len = file.enum_type_count(); i < len; ++i) {
         auto&& enumDescriptor = *file.enum_type(i);
-        registry.registerType(std::make_shared<Enum>(enumDescriptor));
+        auto e = std::make_shared<const Enum>(enumDescriptor);
+        printer.Print("\n");
+        e->writeDefinition(printer);
+        registry.registerType(std::static_pointer_cast<const Type>(e));
     }
 
     for (auto i = 0, len = file.message_type_count(); i < len; ++i) {
         auto&& message = *file.message_type(i);
+
+        for (auto j = 0, len = message.enum_type_count(); j < len; ++j) {
+            auto&& enumDescriptor = *message.enum_type(j);
+            auto e = std::make_shared<const Enum>(enumDescriptor);
+            printer.Print("\n");
+            e->writeDefinition(printer);
+            registry.registerType(std::static_pointer_cast<const Type>(e));
+        }
+
         for (auto j = 0, oneOfLen = message.oneof_decl_count(); j < oneOfLen;
              ++j) {
             auto&& oneOf = *message.oneof_decl(j);
-            registry.registerType(std::make_shared<Union>(oneOf, registry));
+            auto u = std::make_shared<const Union>(oneOf, registry);
+            printer.Print("\n");
+            u->writeDefinition(printer);
+            registry.registerType(std::static_pointer_cast<const Type>(u));
         }
 
-        registry.registerType(std::make_shared<Struct>(message, registry));
+        auto s = std::make_shared<const Struct>(message, registry);
+        printer.Print("\n");
+        s->writeDefinition(printer);
+        registry.registerType(std::static_pointer_cast<const Type>(s));
     }
 }
 
@@ -132,7 +151,7 @@ bool Generator::Generate(const google::protobuf::FileDescriptor* file,
     const auto guard = capsCase(fileName);
     writeProlog(*context._printer, guard);
     TypeRegistry registry;
-    generateTypes(*file, registry);
+    generateTypes(*file, *context._printer, registry);
     writeEpilog(*context._printer, guard);
     return true;
 }

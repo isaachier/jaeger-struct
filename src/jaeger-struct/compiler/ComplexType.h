@@ -22,6 +22,16 @@
 #include <jaeger-struct/compiler/Field.h>
 #include <jaeger-struct/compiler/Type.h>
 
+namespace google {
+namespace protobuf {
+namespace io {
+
+class Printer;
+
+}  // namespace io
+}  // namespace protobuf
+}  // namespace google
+
 namespace jaeger_struct {
 namespace compiler {
 
@@ -38,6 +48,12 @@ class ComplexType : public Type {
     std::string name() const override { return _name; }
 
     const std::vector<Field>& fields() const { return _fields; }
+
+    virtual void
+    writeDefinition(google::protobuf::io::Printer& printer) const = 0;
+
+  protected:
+    void writeBracedDefinition(google::protobuf::io::Printer& printer) const;
 
   private:
     std::string _name;

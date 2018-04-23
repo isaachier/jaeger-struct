@@ -17,6 +17,7 @@
 #include <jaeger-struct/compiler/Enum.h>
 
 #include <google/protobuf/descriptor.h>
+#include <google/protobuf/io/printer.h>
 
 #include <jaeger-struct/compiler/Strings.h>
 
@@ -43,6 +44,22 @@ Enum::Enum(const google::protobuf::EnumDescriptor& descriptor)
     : _name(snakeCase(descriptor.full_name()))
     , _values(determineValues(descriptor))
 {
+}
+
+void Enum::writeDefinition(google::protobuf::io::Printer& printer) const
+{
+    printer.Print("typedef enum $name$ {\n", "name", _name);
+    for (auto itr = std::begin(_values); itr != std::end(_values); ++itr) {
+        if (itr != std::begin(_values)) {
+            printer.Print(",\n");
+        }
+        printer.Print("$name$ = $value$",
+                      "name",
+                      itr->name(),
+                      "value",
+                      std::to_string(itr->value()));
+    }
+    printer.Print("\n} $name$;", "name", _name);
 }
 
 }  // namespace compiler

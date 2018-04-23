@@ -23,11 +23,6 @@
 
 namespace google {
 namespace protobuf {
-namespace io {
-
-class Printer;
-
-}  // namespace io
 
 class Descriptor;
 
@@ -43,6 +38,8 @@ class Struct : public ComplexType {
   public:
     Struct(const google::protobuf::Descriptor& descriptor,
            const TypeRegistry& registry);
+
+    void writeDefinition(google::protobuf::io::Printer& printer) const override;
 };
 
 }  // namespace compiler

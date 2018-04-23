@@ -50,6 +50,7 @@ determineType(const google::protobuf::FieldDescriptor& field,
             snakeCase(makeIdentifier(field.message_type()->full_name())));
         break;
     default:
+        type = typeRegistry.findType(field.cpp_type());
         break;
     }
 
@@ -63,8 +64,28 @@ determineType(const google::protobuf::FieldDescriptor& field,
 Field::Field(const google::protobuf::FieldDescriptor& descriptor,
              const TypeRegistry& registry)
     : _type(determineType(descriptor, registry))
+    , _repetition(descriptor.label())
     , _name(snakeCase(descriptor.name()))
 {
+}
+
+void Field::writeDefinition(google::protobuf::io::Printer& printer) const
+{
+    std::string typeStr;
+    const auto repetition =
+        static_cast<google::protobuf::FieldDescriptor::Label>(_repetition);
+    switch (repetition) {
+    case google::protobuf::FieldDescriptor::LABEL_OPTIONAL:
+    case google::protobuf::FieldDescriptor::LABEL_REQUIRED:
+        typeStr = _type->name();
+        break;
+    default:
+        assert(repetition == google::protobuf::FieldDescriptor::LABEL_REPEATED);
+        typeStr = "jaeger_list";
+        break;
+    }
+
+    printer.Print("$type$ $name$;", "type", typeStr, "name", _name);
 }
 
 }  // namespace compiler

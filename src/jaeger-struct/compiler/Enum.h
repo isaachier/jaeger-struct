@@ -48,6 +48,10 @@ class Enum : public Type {
         {
         }
 
+        const std::string& name() const { return _name; }
+
+        int value() const { return _value; }
+
         friend bool operator<(const Value& lhs, const Value& rhs)
         {
             return lhs._value < rhs._value;
@@ -61,6 +65,8 @@ class Enum : public Type {
     explicit Enum(const google::protobuf::EnumDescriptor& descriptor);
 
     std::string name() const override { return _name; }
+
+    void writeDefinition(google::protobuf::io::Printer& printer) const;
 
   private:
     std::string _name;

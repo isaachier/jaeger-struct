@@ -45,8 +45,13 @@ class Field {
     Field(const google::protobuf::FieldDescriptor& descriptor,
           const TypeRegistry& registry);
 
+    const std::string& name() const { return _name; }
+
+    void writeDefinition(google::protobuf::io::Printer& printer) const;
+
   private:
     std::shared_ptr<const Type> _type;
+    int _repetition;
     std::string _name;
 };
 

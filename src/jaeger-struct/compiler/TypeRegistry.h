@@ -21,6 +21,8 @@
 #include <memory>
 #include <unordered_map>
 
+#include <google/protobuf/descriptor.h>
+
 #include <jaeger-struct/compiler/Type.h>
 
 namespace jaeger_struct {
@@ -30,22 +32,25 @@ class TypeRegistry {
   public:
     TypeRegistry();
 
-    void registerType(std::shared_ptr<Type>&& type)
+    void registerType(std::shared_ptr<const Type>&& type)
     {
-        _typeRegistry.emplace(type->name(), type);
+        _registry.emplace(type->name(), type);
     }
 
     std::shared_ptr<const Type> findType(const std::string& name) const
     {
-        const auto itr = _typeRegistry.find(name);
-        if (itr == std::end(_typeRegistry)) {
-            return std::shared_ptr<Type>();
+        const auto itr = _registry.find(name);
+        if (itr == std::end(_registry)) {
+            return std::shared_ptr<const Type>();
         }
-        return std::static_pointer_cast<const Type>(itr->second);
+        return itr->second;
     }
 
+    std::shared_ptr<const Type>
+    findType(google::protobuf::FieldDescriptor::CppType type) const;
+
   private:
-    std::unordered_map<std::string, std::shared_ptr<Type>> _typeRegistry;
+    std::unordered_map<std::string, std::shared_ptr<const Type>> _registry;
 };
 
 }  // namespace compiler

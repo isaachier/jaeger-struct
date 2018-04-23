@@ -81,5 +81,12 @@ Struct::Struct(const google::protobuf::Descriptor& descriptor,
 {
 }
 
+void Struct::writeDefinition(google::protobuf::io::Printer& printer) const
+{
+    printer.Print("typedef struct $name$ ", "name", name());
+    writeBracedDefinition(printer);
+    printer.Print(" $name$;", "name", name());
+}
+
 }  // namespace compiler
 }  // namespace jaeger_struct

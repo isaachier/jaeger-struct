@@ -21,11 +21,6 @@
 
 namespace google {
 namespace protobuf {
-namespace io {
-
-class Printer;
-
-}  // namespace io
 
 class OneofDescriptor;
 
@@ -41,6 +36,8 @@ class Union : public ComplexType {
   public:
     explicit Union(const google::protobuf::OneofDescriptor& descriptor,
                    const TypeRegistry& registry);
+
+    void writeDefinition(google::protobuf::io::Printer& printer) const override;
 };
 
 }  // namespace compiler

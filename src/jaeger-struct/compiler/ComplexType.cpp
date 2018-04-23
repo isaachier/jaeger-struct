@@ -15,3 +15,27 @@
  */
 
 #include <jaeger-struct/compiler/ComplexType.h>
+
+#include <algorithm>
+
+#include <google/protobuf/io/printer.h>
+
+namespace jaeger_struct {
+namespace compiler {
+
+void ComplexType::writeBracedDefinition(
+    google::protobuf::io::Printer& printer) const
+{
+    printer.Print("{");
+    printer.Indent();
+    std::for_each(
+        std::begin(_fields), std::end(_fields), [&printer](const Field& field) {
+            printer.Print("\n");
+            field.writeDefinition(printer);
+        });
+    printer.Outdent();
+    printer.Print("\n}");
+}
+
+}  // namespace compiler
+}  // namespace jaeger_struct

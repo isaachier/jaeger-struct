@@ -62,5 +62,12 @@ Union::Union(const google::protobuf::OneofDescriptor& descriptor,
 {
 }
 
+void Union::writeDefinition(google::protobuf::io::Printer& printer) const
+{
+    printer.Print("typedef union $name$ ", "name", name());
+    writeBracedDefinition(printer);
+    printer.Print(" $name$;", "name", name());
+}
+
 }  // namespace compiler
 }  // namespace jaeger_struct
