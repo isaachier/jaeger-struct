@@ -14,43 +14,29 @@
  * limitations under the License.
  */
 
-#ifndef JAEGER_STRUCT_COMPILER_FIELD_H
-#define JAEGER_STRUCT_COMPILER_FIELD_H
+#ifndef JAEGER_STRUCT_COMPILER_FUNDAMENTAL_TYPE_H
+#define JAEGER_STRUCT_COMPILER_FUNDAMENTAL_TYPE_H
 
-#include <memory>
-#include <string>
-
+#include <jaeger-struct/compiler/Field.h>
 #include <jaeger-struct/compiler/Type.h>
-
-namespace google {
-namespace protobuf {
-namespace io {
-
-class Printer;
-
-}  // namespace io
-
-class FieldDescriptor;
-
-}  // namespace protobuf
-}  // namespace google
 
 namespace jaeger_struct {
 namespace compiler {
 
-class TypeRegistry;
-
-class Field {
+class FundamentalType : public Type {
   public:
-    Field(const google::protobuf::FieldDescriptor& descriptor,
-          const TypeRegistry& registry);
+    explicit FundamentalType(const std::string& name)
+        : _name(name)
+    {
+    }
+
+    std::string name() const override { return _name; }
 
   private:
-    std::shared_ptr<const Type> _type;
     std::string _name;
 };
 
 }  // namespace compiler
 }  // namespace jaeger_struct
 
-#endif  // JAEGER_STRUCT_COMPILER_FIELD_H
+#endif  // JAEGER_STRUCT_COMPILER_FUNDAMENTAL_TYPE_H

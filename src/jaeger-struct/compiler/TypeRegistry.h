@@ -14,43 +14,41 @@
  * limitations under the License.
  */
 
-#ifndef JAEGER_STRUCT_COMPILER_FIELD_H
-#define JAEGER_STRUCT_COMPILER_FIELD_H
+#ifndef JAEGER_STRUCT_COMPILER_TYPE_REGISTRY_H
+#define JAEGER_STRUCT_COMPILER_TYPE_REGISTRY_H
 
+#include <iostream>
 #include <memory>
-#include <string>
+#include <unordered_map>
 
 #include <jaeger-struct/compiler/Type.h>
-
-namespace google {
-namespace protobuf {
-namespace io {
-
-class Printer;
-
-}  // namespace io
-
-class FieldDescriptor;
-
-}  // namespace protobuf
-}  // namespace google
 
 namespace jaeger_struct {
 namespace compiler {
 
-class TypeRegistry;
-
-class Field {
+class TypeRegistry {
   public:
-    Field(const google::protobuf::FieldDescriptor& descriptor,
-          const TypeRegistry& registry);
+    TypeRegistry();
+
+    void registerType(std::shared_ptr<Type>&& type)
+    {
+        _typeRegistry.emplace(type->name(), type);
+    }
+
+    std::shared_ptr<const Type> findType(const std::string& name) const
+    {
+        const auto itr = _typeRegistry.find(name);
+        if (itr == std::end(_typeRegistry)) {
+            return std::shared_ptr<Type>();
+        }
+        return std::static_pointer_cast<const Type>(itr->second);
+    }
 
   private:
-    std::shared_ptr<const Type> _type;
-    std::string _name;
+    std::unordered_map<std::string, std::shared_ptr<Type>> _typeRegistry;
 };
 
 }  // namespace compiler
 }  // namespace jaeger_struct
 
-#endif  // JAEGER_STRUCT_COMPILER_FIELD_H
+#endif  // JAEGER_STRUCT_COMPILER_TYPE_REGISTRY_H

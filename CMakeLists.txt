@@ -40,9 +40,16 @@ target_include_directories(runtime PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
 
 add_library(compiler
+  src/jaeger-struct/compiler/ComplexType.cpp
+  src/jaeger-struct/compiler/Enum.cpp
   src/jaeger-struct/compiler/Field.cpp
+  src/jaeger-struct/compiler/FundamentalType.cpp
   src/jaeger-struct/compiler/Generator.cpp
-  src/jaeger-struct/compiler/Strings.cpp)
+  src/jaeger-struct/compiler/Strings.cpp
+  src/jaeger-struct/compiler/Struct.cpp
+  src/jaeger-struct/compiler/Type.cpp
+  src/jaeger-struct/compiler/TypeRegistry.cpp
+  src/jaeger-struct/compiler/Union.cpp)
 target_include_directories(compiler PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
 target_link_libraries(compiler PUBLIC

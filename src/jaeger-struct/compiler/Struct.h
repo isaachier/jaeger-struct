@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef JAEGER_STRUCT_COMPILER_FIELD_H
-#define JAEGER_STRUCT_COMPILER_FIELD_H
+#ifndef JAEGER_STRUCT_COMPILER_STRUCT_H
+#define JAEGER_STRUCT_COMPILER_STRUCT_H
 
-#include <memory>
-#include <string>
+#include <vector>
 
-#include <jaeger-struct/compiler/Type.h>
+#include <jaeger-struct/compiler/ComplexType.h>
 
 namespace google {
 namespace protobuf {
@@ -30,7 +29,7 @@ class Printer;
 
 }  // namespace io
 
-class FieldDescriptor;
+class Descriptor;
 
 }  // namespace protobuf
 }  // namespace google
@@ -40,17 +39,13 @@ namespace compiler {
 
 class TypeRegistry;
 
-class Field {
+class Struct : public ComplexType {
   public:
-    Field(const google::protobuf::FieldDescriptor& descriptor,
-          const TypeRegistry& registry);
-
-  private:
-    std::shared_ptr<const Type> _type;
-    std::string _name;
+    Struct(const google::protobuf::Descriptor& descriptor,
+           const TypeRegistry& registry);
 };
 
 }  // namespace compiler
 }  // namespace jaeger_struct
 
-#endif  // JAEGER_STRUCT_COMPILER_FIELD_H
+#endif  // JAEGER_STRUCT_COMPILER_STRUCT_H

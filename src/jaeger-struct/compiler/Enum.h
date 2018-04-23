@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#ifndef JAEGER_STRUCT_COMPILER_FIELD_H
-#define JAEGER_STRUCT_COMPILER_FIELD_H
+#ifndef JAEGER_STRUCT_COMPILER_ENUM_H
+#define JAEGER_STRUCT_COMPILER_ENUM_H
 
-#include <memory>
+#include <set>
 #include <string>
 
 #include <jaeger-struct/compiler/Type.h>
@@ -30,7 +30,7 @@ class Printer;
 
 }  // namespace io
 
-class FieldDescriptor;
+class EnumDescriptor;
 
 }  // namespace protobuf
 }  // namespace google
@@ -38,19 +38,36 @@ class FieldDescriptor;
 namespace jaeger_struct {
 namespace compiler {
 
-class TypeRegistry;
-
-class Field {
+class Enum : public Type {
   public:
-    Field(const google::protobuf::FieldDescriptor& descriptor,
-          const TypeRegistry& registry);
+    struct Value {
+      public:
+        Value(const std::string& name, int value)
+            : _name(name)
+            , _value(value)
+        {
+        }
+
+        friend bool operator<(const Value& lhs, const Value& rhs)
+        {
+            return lhs._value < rhs._value;
+        }
+
+      private:
+        std::string _name;
+        int _value;
+    };
+
+    explicit Enum(const google::protobuf::EnumDescriptor& descriptor);
+
+    std::string name() const override { return _name; }
 
   private:
-    std::shared_ptr<const Type> _type;
     std::string _name;
+    std::set<Value> _values;
 };
 
 }  // namespace compiler
 }  // namespace jaeger_struct
 
-#endif  // JAEGER_STRUCT_COMPILER_FIELD_H
+#endif  // JAEGER_STRUCT_COMPILER_ENUM_H
