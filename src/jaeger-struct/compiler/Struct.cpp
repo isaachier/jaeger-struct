@@ -76,7 +76,7 @@ determineFields(const google::protobuf::Descriptor& descriptor,
         result.emplace_back(
             registry.findType(snakeCase(unionType->full_name())),
             google::protobuf::FieldDescriptor::LABEL_REQUIRED,
-            snakeCase(snakeCase(unionType->full_name()) + "_value"));
+            snakeCase(snakeCase(unionType->name())));
     }
 
     return result;

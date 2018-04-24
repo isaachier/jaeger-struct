@@ -64,9 +64,29 @@ Union::Union(const google::protobuf::OneofDescriptor& descriptor,
 
 void Union::writeDefinition(google::protobuf::io::Printer& printer) const
 {
-    printer.Print("typedef union $name$ ", "name", name());
+    printer.Print("enum {");
+    printer.Indent();
+    const auto fieldsVec = fields();
+    std::for_each(std::begin(fieldsVec),
+                  std::end(fieldsVec),
+                  [this, &fieldsVec, &printer](const Field& field) {
+                      if (&field != &*std::begin(fieldsVec)) {
+                          printer.Print(",");
+                      }
+                      printer.Print(
+                          "\n$name$_type", "name", name() + "_" + field.name());
+                  });
+    printer.Outdent();
+    printer.Print("\n};\n");
+
+    printer.Print("typedef struct $name$ {\n", "name", name());
+    printer.Indent();
+    printer.Print("uint8_t type;\n");
+    printer.Print("union ");
     writeBracedDefinition(printer);
-    printer.Print(" $name$;", "name", name());
+    printer.Print(" value;\n");
+    printer.Outdent();
+    printer.Print("} $name$;", "name", name());
 }
 
 }  // namespace compiler

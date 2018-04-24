@@ -49,6 +49,7 @@ Enum::Enum(const google::protobuf::EnumDescriptor& descriptor)
 void Enum::writeDefinition(google::protobuf::io::Printer& printer) const
 {
     printer.Print("typedef enum $name$ {\n", "name", _name);
+    printer.Indent();
     for (auto itr = std::begin(_values); itr != std::end(_values); ++itr) {
         if (itr != std::begin(_values)) {
             printer.Print(",\n");
@@ -59,6 +60,7 @@ void Enum::writeDefinition(google::protobuf::io::Printer& printer) const
                       "value",
                       std::to_string(itr->value()));
     }
+    printer.Outdent();
     printer.Print("\n} $name$;", "name", _name);
 }
 
