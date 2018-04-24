@@ -55,6 +55,8 @@ class ComplexType : public Type {
   protected:
     void writeBracedDefinition(google::protobuf::io::Printer& printer) const;
 
+    std::vector<Field>& fields() { return _fields; }
+
   private:
     std::string _name;
     std::vector<Field> _fields;

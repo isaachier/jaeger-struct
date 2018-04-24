@@ -107,6 +107,7 @@ void generateTypes(const google::protobuf::FileDescriptor& file,
         auto e = std::make_shared<const Enum>(enumDescriptor);
         printer.Print("\n");
         e->writeDefinition(printer);
+        printer.Print("\n");
         registry.registerType(std::static_pointer_cast<const Type>(e));
     }
 
@@ -118,6 +119,7 @@ void generateTypes(const google::protobuf::FileDescriptor& file,
             auto e = std::make_shared<const Enum>(enumDescriptor);
             printer.Print("\n");
             e->writeDefinition(printer);
+            printer.Print("\n");
             registry.registerType(std::static_pointer_cast<const Type>(e));
         }
 
@@ -127,12 +129,14 @@ void generateTypes(const google::protobuf::FileDescriptor& file,
             auto u = std::make_shared<const Union>(oneOf, registry);
             printer.Print("\n");
             u->writeDefinition(printer);
+            printer.Print("\n");
             registry.registerType(std::static_pointer_cast<const Type>(u));
         }
 
         auto s = std::make_shared<const Struct>(message, registry);
         printer.Print("\n");
         s->writeDefinition(printer);
+        printer.Print("\n");
         registry.registerType(std::static_pointer_cast<const Type>(s));
     }
 }

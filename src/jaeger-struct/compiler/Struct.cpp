@@ -22,6 +22,7 @@
 #include <google/protobuf/io/printer.h>
 
 #include <jaeger-struct/compiler/Strings.h>
+#include <jaeger-struct/compiler/TypeRegistry.h>
 
 namespace jaeger_struct {
 namespace compiler {
@@ -32,7 +33,7 @@ determineFields(const google::protobuf::Descriptor& descriptor,
                 const TypeRegistry& registry)
 {
     std::unordered_set<const google::protobuf::FieldDescriptor*> unionFields;
-    for (auto i = 0, len = descriptor.oneof_decl_count(); i < len; i++) {
+    for (auto i = 0, len = descriptor.oneof_decl_count(); i < len; ++i) {
         auto&& oneOf = *descriptor.oneof_decl(i);
         for (auto j = 0, oneOfLen = oneOf.field_count(); j < oneOfLen; j++) {
             unionFields.insert(oneOf.field(j));
@@ -40,7 +41,7 @@ determineFields(const google::protobuf::Descriptor& descriptor,
     }
 
     std::unordered_set<const google::protobuf::FieldDescriptor*> fields;
-    for (auto i = 0, len = descriptor.field_count(); i < len; i++) {
+    for (auto i = 0, len = descriptor.field_count(); i < len; ++i) {
         auto&& field = *descriptor.field(i);
         fields.insert(&field);
     }
@@ -69,6 +70,15 @@ determineFields(const google::protobuf::Descriptor& descriptor,
         [&registry](const google::protobuf::FieldDescriptor* descriptor) {
             return Field(*descriptor, registry);
         });
+
+    for (auto i = 0, len = descriptor.oneof_decl_count(); i < len; ++i) {
+        auto&& unionType = descriptor.oneof_decl(i);
+        result.emplace_back(
+            registry.findType(snakeCase(unionType->full_name())),
+            google::protobuf::FieldDescriptor::LABEL_REQUIRED,
+            snakeCase(snakeCase(unionType->full_name()) + "_value"));
+    }
+
     return result;
 }
 
